@@ -38,7 +38,7 @@ const updateUser = async (req, res) => {
     const image = req.file ? req.file.filename : null;
 
     try {
-        const conn = await pool.getConnection();
+        const conn = await (await pool).getConnection();
         const [user] = await conn.query('SELECT * FROM users WHERE id = ?', [id]);
 
         if (user.length === 0) {
