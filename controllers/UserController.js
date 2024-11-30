@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
 const { pool } = require('../config/connection');
+const { bucket } = require('../config/storage');
+const { format } = require('util');
 
 const getUsers = async (req, res) => {
     try {
@@ -32,10 +32,28 @@ const getUserById = async (req, res) => {
     }
 };
 
+const uploadImageToCloudStorage = (file) => {
+    return new Promise((resolve, reject) => {
+        if (!file) {
+            reject(new Error('No file provided'));
+        }
+
+        const blob = bucket.file(file.filename);
+        const blobStream = blob.createWriteStream();
+
+        blobStream.on('error', (err) => reject(err));
+        blobStream.on('finish', () => {
+            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
+            resolve(publicUrl);
+        });
+
+        blobStream.end(file.buffer);
+    });
+};
+
 const updateUser = async (req, res) => {
     const { id } = req.params;
     const { username, email, phone } = req.body;
-    const image = req.file ? req.file.filename : null;
 
     try {
         const conn = await (await pool).getConnection();
@@ -47,22 +65,19 @@ const updateUser = async (req, res) => {
         }
 
         const currentUser = user[0];
+        let updatedImageUrl = currentUser.image;
 
-        if (image && currentUser.image) {
-            const filePath = path.join(__dirname, '..', 'uploads', currentUser.image);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
+        if (req.file) {
+            updatedImageUrl = await uploadImageToCloudStorage(req.file);
         }
 
         const updatedUsername = username || currentUser.username;
         const updatedEmail = email || currentUser.email;
         const updatedPhone = phone || currentUser.phone;
-        const updatedImage = image || currentUser.image;
 
         await conn.query(
             'UPDATE users SET username = ?, email = ?, phone = ?, image = ? WHERE id = ?',
-            [updatedUsername, updatedEmail, updatedPhone, updatedImage, id]
+            [updatedUsername, updatedEmail, updatedPhone, updatedImageUrl, id]
         );
 
         res.json({
@@ -72,7 +87,7 @@ const updateUser = async (req, res) => {
                 username: updatedUsername,
                 email: updatedEmail,
                 phone: updatedPhone,
-                image: updatedImage,
+                image: updatedImageUrl,
             },
         });
 
