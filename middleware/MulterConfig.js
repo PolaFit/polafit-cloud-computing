@@ -1,6 +1,7 @@
 const multer = require('multer');
 const { bucket } = require('../config/storage');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const storage = multer.memoryStorage();
 
@@ -12,9 +13,9 @@ const uploadImageToCloudStorage = (file) => {
             return reject(new Error('No file provided'));
         }
 
-        // Buat nama file yang unik
-        const fileName = `${Date.now()}-${file.originalname}`;
-        const blob = bucket.file(fileName);
+        const uniqueFileName = `profile/${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+
+        const blob = bucket.file(uniqueFileName);
         const blobStream = blob.createWriteStream({
             resumable: false,
             contentType: file.mimetype,
