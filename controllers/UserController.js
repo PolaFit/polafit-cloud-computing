@@ -1,6 +1,5 @@
 const { pool } = require('../config/connection');
-const { bucket } = require('../config/storage');
-const { format } = require('util');
+const { uploadImageToCloudStorage } = require('../middleware/upload');
 
 const getUsers = async (req, res) => {
     try {
@@ -30,25 +29,6 @@ const getUserById = async (req, res) => {
         console.error('Error fetching user by ID:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-};
-
-const uploadImageToCloudStorage = (file) => {
-    return new Promise((resolve, reject) => {
-        if (!file) {
-            reject(new Error('No file provided'));
-        }
-
-        const blob = bucket.file(file.filename);
-        const blobStream = blob.createWriteStream();
-
-        blobStream.on('error', (err) => reject(err));
-        blobStream.on('finish', () => {
-            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
-            resolve(publicUrl);
-        });
-
-        blobStream.end(file.buffer);
-    });
 };
 
 const updateUser = async (req, res) => {
@@ -94,7 +74,10 @@ const updateUser = async (req, res) => {
         conn.release();
     } catch (error) {
         console.error('Error updating user:', error);
-        res.status(500).json({ message: 'Internal server error', error: error.message });
+        res.status(500).json({
+            message: 'Internal server error',
+            error: error.message,
+        });
     }
 };
 

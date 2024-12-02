@@ -1,27 +1,33 @@
 const multer = require('multer');
+const { bucket } = require('../config/storage');
 const path = require('path');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Folder tempat menyimpan file
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
-});
+const storage = multer.memoryStorage();
 
-const upload = multer({
-    storage,
-    fileFilter: (req, file, cb) => {
-        const fileTypes = /jpeg|jpg|png/;
-        const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = fileTypes.test(file.mimetype);
+const upload = multer({ storage }).single('image');
 
-        if (extname && mimetype) {
-            return cb(null, true);
+const uploadImageToCloudStorage = (file) => {
+    return new Promise((resolve, reject) => {
+        if (!file) {
+            return reject(new Error('No file provided'));
         }
-        cb(new Error('Only images are allowed!'));
-    }
-});
 
-module.exports = upload;
+        // Buat nama file yang unik
+        const fileName = `${Date.now()}-${file.originalname}`;
+        const blob = bucket.file(fileName);
+        const blobStream = blob.createWriteStream({
+            resumable: false,
+            contentType: file.mimetype,
+        });
+
+        blobStream.on('error', (err) => reject(err));
+        blobStream.on('finish', () => {
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+            resolve(publicUrl);
+        });
+
+        blobStream.end(file.buffer);
+    });
+};
+
+module.exports = { upload, uploadImageToCloudStorage };
