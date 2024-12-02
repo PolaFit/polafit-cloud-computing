@@ -1,8 +1,8 @@
 const { Storage } = require('@google-cloud/storage');
-const path = require('path');
+require('dotenv').config();
 
-const keyFilename = path.join(__dirname, '../polafit-webservice.json');
-const bucketName = 'polafit-bucket';  
+const keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+const bucketName = process.env.BUCKET_NAME;  
 
 const storage = new Storage({ keyFilename });
 const bucket = storage.bucket(bucketName);
