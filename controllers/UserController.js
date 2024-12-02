@@ -1,5 +1,5 @@
 const { pool } = require('../config/connection');
-const { uploadImageToCloudStorage } = require('../middleware/upload');
+const { uploadImageToCloudStorage } = require('../middleware/MulterConfig');
 
 const getUsers = async (req, res) => {
     try {
