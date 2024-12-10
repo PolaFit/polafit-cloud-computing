@@ -17,7 +17,7 @@ const registerUser = async (req, res) => {
 
     try {
         const conn = await (await pool).getConnection();
-        
+
         const [existingEmail] = await conn.query(`SELECT * FROM users WHERE email = ?`, [email]);
         const [existingUser] = await conn.query(`SELECT * FROM users WHERE username = ?`, [username]);
 
@@ -42,27 +42,57 @@ const registerUser = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        
-        const conn = await (await pool).getConnection();
-        const [user] = await conn.query(`SELECT * FROM users WHERE username = ?`, [username]);
+    const { username, password } = req.body;
 
-        if (user.length === 0) {
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    let conn;
+    try {
+        conn = await (await pool).getConnection();
+
+        const [users] = await conn.query(
+            `SELECT id, username, email, password FROM users WHERE username = ?`,
+            [username]
+        );
+
+        if (users.length === 0) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user[0].password);
+        const user = users[0];
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
 
-        const token = generateToken(user[0]);
-        res.cookie('token', token, { httpOnly: true });
-        res.status(200).json({ message: 'Login successful', token });
+        const token = generateToken({
+            id: user.id,
+            username: user.username
+        });
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict',
+        });
+
+        res.status(200).json({
+            message: 'Login successful',
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+            },
+        });
     } catch (error) {
         console.error('Error in loginUser:', error);
         res.status(500).json({ message: 'Internal server error' });
+    } finally {
+        if (conn) conn.release();
     }
 };
 
