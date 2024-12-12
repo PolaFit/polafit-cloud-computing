@@ -1,6 +1,5 @@
 const multer = require('multer');
 const { bucket } = require('../config/storage');
-const { uploadPredictionToCloudStorage } = require('../config/storage');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
