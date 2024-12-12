@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const auth = require('./routes/auth.js');
+const foodHistory = require('./routes/food.js');
 
 dotenv.config();
 const app = express();
@@ -16,6 +17,7 @@ app.get("/", (req, res) => {
 });
 
 app.use('/auth', auth);
+app.use(foodHistory);
 app.use('/uploads', express.static('uploads'));
 
 app.listen(port, () => {
