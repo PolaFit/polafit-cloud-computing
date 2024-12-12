@@ -13,14 +13,14 @@ const storeFoodHistory = async (req, res) => {
         const publicUrl = await uploadPredictionToCloudStorage(file);
         const conn = await (await pool).getConnection();
         await conn.query(
-            'INSERT INTO food_history (user_id, name, serving, calories, protein, fat, carbs, fiber, sugar, image) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+            'INSERT INTO food_history (user_id, name, serving, calories, protein, fat, carbs, fiber, sugar, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [userId, foodName, serving, calories, protein, fat, carbs, fiber, sugar, publicUrl]
         );
         conn.release();
 
-        res.status(201).json({ 
-            message: 'Prediction result stored successfully', 
-            imageUrl: publicUrl 
+        res.status(201).json({
+            message: 'Prediction result stored successfully',
+            imageUrl: publicUrl
         });
     } catch (error) {
         console.error('Error storing prediction result:', error);
