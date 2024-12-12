@@ -1,9 +1,8 @@
 const { pool } = require('../config/connection');
-const { bucket } = require('../config/storage');
-const { v4: uuidv4 } = require('uuid');
+const { uploadPredictionToCloudStorage } = require('../config/storage');
 
 const storeFoodHistory = async (req, res) => {
-    const { userId, name, serving, calories, protein, fat, carbs, fiber, sugar } = req.body;
+    const { userId, foodName, serving, calories, protein, fat, carbs, fiber, sugar } = req.body;
     const file = req.file;
 
     if (!file) {
@@ -11,26 +10,20 @@ const storeFoodHistory = async (req, res) => {
     }
 
     try {
-        const fileName = `${userId}/food-history/${uuidv4()}-${file.originalname}`;
-        const fileUpload = bucket.file(fileName);
-
-        await fileUpload.save(file.buffer, {
-            metadata: { contentType: file.mimetype },
-            public: true,
-        });
-
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-
+        const publicUrl = await uploadPredictionToCloudStorage(file);
         const conn = await (await pool).getConnection();
         await conn.query(
-            'INSERT INTO food_history (user_id, name, serving, calories, protein, fat, carbs, fiber, sugar, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
-            [userId, name, serving, calories, protein, fat, carbs, fiber, sugar, publicUrl]
+            'INSERT INTO predicted_food (user_id, name, serving, calories, protein, fat, carbs, fiber, sugar, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+            [userId, foodName, serving, calories, protein, fat, carbs, fiber, sugar, publicUrl]
         );
-
-        res.status(201).json({ message: 'Food history stored successfully', imageUrl: publicUrl });
         conn.release();
+
+        res.status(201).json({ 
+            message: 'Prediction result stored successfully', 
+            imageUrl: publicUrl 
+        });
     } catch (error) {
-        console.error('Error storing food history:', error);
+        console.error('Error storing prediction result:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
