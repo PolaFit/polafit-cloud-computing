@@ -1,5 +1,5 @@
 const { pool } = require('../config/connection');
-const { uploadPredictionToCloudStorage } = require('../config/storage');
+const { uploadPredictionToCloudStorage } = require('../middleware/MulterConfig');
 
 const storeFoodHistory = async (req, res) => {
     const { userId, foodName, serving, calories, protein, fat, carbs, fiber, sugar } = req.body;
